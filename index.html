@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI StudyBuddy</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap');
+
+    body {
+      font-family: 'Orbitron', sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: #fff;
+      text-align: center;
+      padding: 30px;
+    }
+
+    h2 {
+      font-size: 32px;
+      color: #00f6ff;
+      text-shadow: 0 0 10px #00f6ff;
+    }
+
+    label {
+      display: block;
+      margin: 20px 0;
+    }
+
+    #modeToggle {
+      margin: 0 10px;
+    }
+
+    button {
+      padding: 14px 28px;
+      margin: 20px;
+      font-size: 18px;
+      border: none;
+      border-radius: 30px;
+      background: linear-gradient(to right, #00c9ff, #92fe9d);
+      box-shadow: 0 0 10px #00ffcc;
+      cursor: pointer;
+    }
+
+    #answerText, #feedback {
+      margin-top: 20px;
+      font-weight: bold;
+      font-size: 18px;
+      background: rgba(255,255,255,0.1);
+      padding: 12px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <h2>🧠 AI StudyBuddy</h2>
+
+  <label>
+    <input type="checkbox" id="modeToggle" />
+    🔁 Enable Ask Me Anything Mode
+  </label>
+
+  <button id="recordBtn">🎤 Start Talking</button>
+
+  <p><strong>Your Input:</strong></p>
+  <p id="answerText">[waiting...]</p>
+
+  <p><strong>AI Response:</strong></p>
+  <p id="feedback">[waiting...]</p>
+
+  <script>
+    const recordBtn = document.getElementById('recordBtn');
+    const answerText = document.getElementById('answerText');
+    const feedbackEl = document.getElementById('feedback');
+    const toggle = document.getElementById('modeToggle');
+
+    let recognition;
+
+    if ('webkitSpeechRecognition' in window) {
+      recognition = new webkitSpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = async (event) => {
+        const transcript = event.results[0][0].transcript;
+        answerText.textContent = transcript;
+
+        const url = toggle.checked ? '/ask' : '/webhook';
+        const payload = toggle.checked
+          ? { prompt: transcript }
+          : {
+              student_id: 'student_001',
+              question: "What is Newton's Second Law of Motion?",
+              answer_text: transcript
+            };
+
+        try {
+          const res = await fetch(`http://localhost:3000${url}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          const data = await res.json();
+          feedbackEl.textContent = data.feedback || 'No response.';
+        } catch (err) {
+          feedbackEl.textContent = '❌ Error connecting to AI.';
+          console.error(err);
+        }
+      };
+    } else {
+      alert("Chrome is required for speech input.");
+    }
+
+    recordBtn.onclick = () => {
+      feedbackEl.textContent = '[Listening…]';
+      recognition.start();
+    };
+  </script>
+</body>
+</html>
